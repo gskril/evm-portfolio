@@ -115,13 +115,10 @@ export function useNetworthTimeSeries() {
       const res = await honoClient.balances.networth.$get()
       const json = await res.json()
 
-      // Filter to only include entries with usdValue and map to chart format
-      return json
-        .filter((item) => item.usdValue != null)
-        .map((item) => ({
-          ...item,
-          value: item.usdValue as number,
-        }))
+      return json.map((item) => ({
+        ...item,
+        value: item.usdValue as number,
+      }))
     },
   })
 }
