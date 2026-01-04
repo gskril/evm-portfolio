@@ -46,12 +46,14 @@ new Cron('0 */12 * * *', async () => {
     chainId: 1,
   })
 
+  const ethValue = balances.ethValue ?? 0
   // Convert ETH value to USD (1 ETH / rate = USD value)
-  const usdValue = (balances.ethValue ?? 0) / usdRateToEth
+  const usdValue = ethValue / usdRateToEth
 
   await db
     .insertInto('networth')
     .values({
+      ethValue,
       usdValue,
     })
     .execute()
