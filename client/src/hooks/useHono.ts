@@ -119,9 +119,17 @@ export function useNetworthTimeSeries() {
       const res = await honoClient.balances.networth.$get()
       const json = await res.json()
 
+      // Data is stored in USD, convert to selected currency
+      // USD rate is how much USD equals 1 ETH, so to convert USD to other currencies:
+      // - For USD: value stays the same (usdRate/usdRate = 1)
+      // - For EUR: multiply by (usdRate/eurRate) to get EUR value
+      // - For ETH: multiply by usdRate to get ETH value
+      const usdRate = fiat?.getRate('USD') ?? 1
+      const targetRate = fiat?.getRate(currency) ?? 1
+
       return json.map((item) => ({
         ...item,
-        value: item.ethValue / (fiat?.getRate(currency) ?? 1),
+        value: (item.usdValue * targetRate) / usdRate,
       }))
     },
   })

@@ -7,6 +7,7 @@ import { serveStatic } from 'hono/bun'
 import { api } from './api'
 import { db } from './db'
 import { addCheckBalanceTasksToQueue } from './handlers/balances'
+import { getRateToEth } from './price'
 import { erc20Queue } from './queues/workers/erc20'
 import { ethQueue } from './queues/workers/eth'
 
@@ -38,10 +39,20 @@ new Cron('0 */12 * * *', async () => {
     return
   }
 
+  // Get USD rate (USDC rate to ETH)
+  const usdRateToEth = await getRateToEth({
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+    decimals: 6,
+    chainId: 1,
+  })
+
+  // Convert ETH value to USD (1 ETH / rate = USD value)
+  const usdValue = (balances.ethValue ?? 0) / usdRateToEth
+
   await db
     .insertInto('networth')
     .values({
-      ethValue: balances.ethValue ?? 0,
+      usdValue,
     })
     .execute()
 

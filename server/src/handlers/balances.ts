@@ -181,7 +181,7 @@ export async function getEthValueByAccount(c: Context) {
 export async function getNetworthTimeSeries(c: Context) {
   const networth = await db
     .selectFrom('networth')
-    .selectAll()
+    .select(['timestamp', 'usdValue'])
     .limit(60)
     .orderBy('timestamp', 'desc')
     .execute()
