@@ -64,7 +64,8 @@ export function Home() {
           <div
             className={cn(
               'relative hidden w-full',
-              !!networthTimeSeries &&
+              currency === 'USD' &&
+                !!networthTimeSeries &&
                 networthTimeSeries.length > 5 &&
                 'lg:block'
             )}
