@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { hc } from 'hono/client'
 import { Client } from 'server/hc'
 
-import { useCurrency } from './useCurrency'
 import { useQueues } from './useQueues'
 
 const url = new URL(window.location.origin)
