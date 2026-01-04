@@ -48,6 +48,7 @@ interface BalanceRow {
 interface NetworthRow {
   timestamp: ColumnType<Date, never, string>
   ethValue: number
+  usdValue: number | null
 }
 
 export type Tables = {

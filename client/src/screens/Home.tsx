@@ -64,8 +64,7 @@ export function Home() {
           <div
             className={cn(
               'relative hidden w-full',
-              currency === 'ETH' &&
-                !!networthTimeSeries &&
+              !!networthTimeSeries &&
                 networthTimeSeries.length > 5 &&
                 'lg:block'
             )}
@@ -116,6 +115,7 @@ export function Home() {
                           minute: 'numeric',
                         })
                       }}
+                      formatter={(value) => formatCurrency(value as number, 'USD')}
                     />
                   }
                 />

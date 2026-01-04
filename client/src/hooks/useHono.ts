@@ -110,19 +110,19 @@ export function useEthValuesByAccount() {
 }
 
 export function useNetworthTimeSeries() {
-  const { currency } = useCurrency()
-  const { data: fiat } = useFiat()
-
   return useQuery({
-    queryKey: ['networthTimeSeries', currency, fiat],
+    queryKey: ['networthTimeSeries'],
     queryFn: async () => {
       const res = await honoClient.balances.networth.$get()
       const json = await res.json()
 
-      return json.map((item) => ({
-        ...item,
-        value: item.ethValue / (fiat?.getRate(currency) ?? 1),
-      }))
+      // Filter to only include entries with usdValue and map to chart format
+      return json
+        .filter((item) => item.usdValue != null)
+        .map((item) => ({
+          ...item,
+          value: item.usdValue as number,
+        }))
     },
   })
 }
