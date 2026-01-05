@@ -32,7 +32,7 @@ export function Home() {
   const { currency } = useCurrency()
   const { data: fiat } = useFiat()
   const ethValuesByAccount = useEthValuesByAccount()
-  const { data: networthTimeSeries } = useNetworthTimeSeries()
+  const { data: networthTimeSeries } = useNetworthTimeSeries(currency)
 
   return (
     <>
@@ -64,7 +64,7 @@ export function Home() {
           <div
             className={cn(
               'relative hidden w-full',
-              currency === 'USD' &&
+              (currency === 'USD' || currency === 'ETH') &&
                 !!networthTimeSeries &&
                 networthTimeSeries.length > 5 &&
                 'lg:block'
@@ -116,7 +116,7 @@ export function Home() {
                           minute: 'numeric',
                         })
                       }}
-                      formatter={(value) => formatCurrency(value as number, 'USD')}
+                      formatter={(value) => formatCurrency(value as number, currency ?? 'USD')}
                     />
                   }
                 />

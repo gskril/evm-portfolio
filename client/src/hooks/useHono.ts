@@ -108,16 +108,16 @@ export function useEthValuesByAccount() {
   })
 }
 
-export function useNetworthTimeSeries() {
+export function useNetworthTimeSeries(currency: string | undefined) {
   return useQuery({
-    queryKey: ['networthTimeSeries'],
+    queryKey: ['networthTimeSeries', currency],
     queryFn: async () => {
       const res = await honoClient.balances.networth.$get()
       const json = await res.json()
 
       return json.map((item) => ({
         ...item,
-        value: item.usdValue as number,
+        value: currency === 'ETH' ? item.ethValue : (item.usdValue as number),
       }))
     },
   })
