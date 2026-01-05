@@ -59,28 +59,20 @@ export function PortfolioCard() {
           <TableBody>
             {balances.data?.tokens.map((token) => {
               const isExpanded = expandedRows.has(token.id)
-              const hasMultipleAccounts =
-                token.accountBreakdown && token.accountBreakdown.length > 1
 
               return (
                 <>
                   <TableRow
                     key={token.id}
-                    className={hasMultipleAccounts ? 'cursor-pointer' : ''}
-                    onClick={
-                      hasMultipleAccounts
-                        ? () => toggleRow(token.id)
-                        : undefined
-                    }
+                    className="cursor-pointer"
+                    onClick={() => toggleRow(token.id)}
                   >
                     <TableCell>
-                      {hasMultipleAccounts && (
-                        <ChevronDownIcon
-                          className={`h-4 w-4 transition-transform ${
-                            isExpanded ? 'rotate-180' : ''
-                          }`}
-                        />
-                      )}
+                      <ChevronDownIcon
+                        className={`h-4 w-4 transition-transform ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}
+                      />
                     </TableCell>
                     <TableCell>{token.chain.name}</TableCell>
                     <TableCell title={token.symbol}>{token.name} </TableCell>
