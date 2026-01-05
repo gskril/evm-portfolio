@@ -58,7 +58,9 @@ export function Home() {
               })()}
             </h1>
 
-            <span className="text-muted-foreground text-sm">Total value</span>
+            <span className="text-muted-foreground min-w-48 text-center text-sm">
+              Total value
+            </span>
           </div>
 
           <div
@@ -116,7 +118,9 @@ export function Home() {
                           minute: 'numeric',
                         })
                       }}
-                      formatter={(value) => formatCurrency(value as number, currency ?? 'USD')}
+                      formatter={(value) =>
+                        formatCurrency(value as number, currency ?? 'USD')
+                      }
                     />
                   }
                 />
