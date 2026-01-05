@@ -1,12 +1,15 @@
-import { ArrowUpRight } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { ArrowUpRight, LogOut } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 
+import { useLogout } from '@/hooks/useAuth'
 import { useAccounts } from '@/hooks/useHono'
 import { SERVER_URL } from '@/hooks/useHono'
 import { useQueues } from '@/hooks/useQueues'
 import { cn } from '@/lib/utils'
 
 import { CurrencySelector } from './CurrencySelector'
+import { Button } from './ui/button'
 
 const links = [
   {
@@ -37,8 +40,20 @@ const links = [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const queues = useQueues()
   const { data: offchainAccounts } = useAccounts('offchain')
+  const logout = useLogout()
+
+  const handleLogout = async () => {
+    try {
+      await logout.mutateAsync()
+      toast.success('Logged out successfully')
+      navigate('/login')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to logout')
+    }
+  }
 
   return (
     <div className="grid grid-cols-[10rem_1fr] lg:grid-cols-[15rem_1fr]">
@@ -85,6 +100,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <ArrowUpRight className="h-4 w-4" />
             </a>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            isLoading={logout.isPending}
+            className="w-full"
+          >
+            <LogOut />
+            Logout
+          </Button>
         </div>
       </aside>
 

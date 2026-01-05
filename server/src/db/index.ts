@@ -51,12 +51,20 @@ interface NetworthRow {
   usdValue: number | null
 }
 
+interface AuthRow {
+  id: number
+  passwordHash: string | null
+  createdAt: GeneratedAlways<Date>
+  updatedAt: ColumnType<Date, never, string | undefined>
+}
+
 export type Tables = {
   accounts: AccountRow
   chains: ChainRow
   tokens: TokenRow
   balances: BalanceRow
   networth: NetworthRow
+  auth: AuthRow
 }
 
 async function createDatabase() {
