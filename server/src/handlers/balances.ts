@@ -76,7 +76,7 @@ export async function fetchBalances(c: Context) {
 }
 
 export async function getBalances(c: Context) {
-  const { balances, tokens, chains } = await db
+  const { balances, accountBalances, tokens, chains, accounts } = await db
     .transaction()
     .execute(async (trx) => {
       // Get all balances, grouped by token (address + chain)
@@ -97,6 +97,13 @@ export async function getBalances(c: Context) {
         ethValue: number
       }[]
 
+      // Get all balances with owner information (not aggregated)
+      const accountBalances = await trx
+        .selectFrom('balances')
+        .select(['token', 'owner', 'balance', 'ethValue'])
+        .where('balance', '>', 0)
+        .execute()
+
       const tokens = await trx
         .selectFrom('tokens')
         .selectAll()
@@ -109,7 +116,12 @@ export async function getBalances(c: Context) {
 
       const chains = await trx.selectFrom('chains').selectAll().execute()
 
-      return { balances, tokens, chains }
+      const accounts = await trx
+        .selectFrom('accounts')
+        .select(['id', 'name', 'address'])
+        .execute()
+
+      return { balances, accountBalances, tokens, chains, accounts }
     })
 
   const tokensWithChain = tokens.map((t) => ({
@@ -117,12 +129,26 @@ export async function getBalances(c: Context) {
     chain: chains.find((c) => c.id === t.chain)!,
   }))
 
-  const enhancedBalances = balances.map((b) => ({
-    balance: b.balance,
-    ethValue: b.ethValue,
-    ethValuePerToken: b.ethValue / b.balance,
-    ...tokensWithChain.find((t) => t.id === b.token)!,
-  }))
+  const enhancedBalances = balances.map((b) => {
+    // Get account breakdown for this token
+    const accountsForToken = accountBalances
+      .filter((ab) => ab.token === b.token)
+      .map((ab) => ({
+        account: accounts.find((a) => a.id === ab.owner)!,
+        balance: ab.balance,
+        ethValue: ab.ethValue,
+        percentage: (ab.balance / b.balance) * 100,
+      }))
+      .sort((a, b) => b.balance - a.balance)
+
+    return {
+      balance: b.balance,
+      ethValue: b.ethValue,
+      ethValuePerToken: b.ethValue / b.balance,
+      accountBreakdown: accountsForToken,
+      ...tokensWithChain.find((t) => t.id === b.token)!,
+    }
+  })
 
   // Note: this isn't technically precise because different tokens could have
   // the same address on different chains, but i've never seen that happen in
