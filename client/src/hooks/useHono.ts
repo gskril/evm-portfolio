@@ -115,10 +115,14 @@ export function useNetworthTimeSeries(currency: string | undefined) {
       const res = await honoClient.balances.networth.$get()
       const json = await res.json()
 
-      return json.map((item) => ({
-        ...item,
-        value: currency === 'ETH' ? item.ethValue : (item.usdValue as number),
-      }))
+      // For ETH: all records are valid (they all have ethValue)
+      // For USD: only records with usdValue are valid
+      return json
+        .filter((item) => currency === 'ETH' || item.usdValue != null)
+        .map((item) => ({
+          ...item,
+          value: currency === 'ETH' ? item.ethValue : (item.usdValue as number),
+        }))
     },
   })
 }
