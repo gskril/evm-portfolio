@@ -110,45 +110,41 @@ export function PortfolioCard() {
                   </TableRow>
                   {isExpanded && token.accountBreakdown && (
                     <TableRow key={`${token.id}-breakdown`}>
-                      <TableCell colSpan={6} className="bg-muted/50 p-4">
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium text-muted-foreground">
-                            Account Breakdown
-                          </div>
-                          <div className="space-y-1">
-                            {token.accountBreakdown.map((account) => (
-                              <div
-                                key={account.account.id}
-                                className="flex items-center justify-between text-sm"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">
-                                    {account.account.name}
+                      <TableCell colSpan={6} className="p-0">
+                        <div className="divide-y divide-border">
+                          {token.accountBreakdown.map((account, idx) => (
+                            <div
+                              key={account.account.id}
+                              className={`flex items-center justify-between px-4 py-3 text-sm ${
+                                idx % 2 === 0 ? 'bg-muted/30' : 'bg-muted/50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">
+                                  {account.account.name}
+                                </span>
+                                {account.account.address && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {account.account.address.slice(0, 6)}...
+                                    {account.account.address.slice(-4)}
                                   </span>
-                                  {account.account.address && (
-                                    <span className="text-xs text-muted-foreground">
-                                      {account.account.address.slice(0, 6)}...
-                                      {account.account.address.slice(-4)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <span className="text-muted-foreground">
-                                    {toFixed(account.balance, 4)} (
-                                    {toFixed(account.percentage, 2)}%)
-                                  </span>
-                                  <span className="font-medium">
-                                    {fiat &&
-                                      currency &&
-                                      formatCurrency(
-                                        account.ethValue / fiat.getRate(currency),
-                                        currency
-                                      )}
-                                  </span>
-                                </div>
+                                )}
                               </div>
-                            ))}
-                          </div>
+                              <div className="flex items-center gap-6">
+                                <span className="text-muted-foreground tabular-nums">
+                                  {toFixed(account.balance, 4)} ({toFixed(account.percentage, 2)}%)
+                                </span>
+                                <span className="font-medium tabular-nums min-w-[100px] text-right">
+                                  {fiat &&
+                                    currency &&
+                                    formatCurrency(
+                                      account.ethValue / fiat.getRate(currency),
+                                      currency
+                                    )}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </TableCell>
                     </TableRow>
