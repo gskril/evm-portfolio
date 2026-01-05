@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { hc } from 'hono/client'
 import { Client } from 'server/hc'
 
-import { useCurrency } from './useCurrency'
 import { useQueues } from './useQueues'
 
 const url = new URL(window.location.origin)
@@ -109,20 +108,21 @@ export function useEthValuesByAccount() {
   })
 }
 
-export function useNetworthTimeSeries() {
-  const { currency } = useCurrency()
-  const { data: fiat } = useFiat()
-
+export function useNetworthTimeSeries(currency: string | undefined) {
   return useQuery({
-    queryKey: ['networthTimeSeries', currency, fiat],
+    queryKey: ['networthTimeSeries', currency],
     queryFn: async () => {
       const res = await honoClient.balances.networth.$get()
       const json = await res.json()
 
-      return json.map((item) => ({
-        ...item,
-        value: item.ethValue / (fiat?.getRate(currency) ?? 1),
-      }))
+      // For ETH: all records are valid (they all have ethValue)
+      // For USD: only records with usdValue are valid
+      return json
+        .filter((item) => currency === 'ETH' || item.usdValue != null)
+        .map((item) => ({
+          ...item,
+          value: currency === 'ETH' ? item.ethValue : (item.usdValue as number),
+        }))
     },
   })
 }
