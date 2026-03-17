@@ -141,7 +141,6 @@ export function Home() {
                 <XAxis
                   dataKey="timestamp"
                   type="number"
-                  scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickLine={false}
                   axisLine={false}
@@ -167,9 +166,10 @@ export function Home() {
                   content={
                     <ChartTooltipContent
                       indicator="dot"
-                      labelFormatter={(value) => {
-                        const date = new Date(value)
-                        return date.toLocaleDateString('en-US', {
+                      labelFormatter={(_value, payload) => {
+                        const timestamp = payload?.[0]?.payload?.timestamp
+                        if (!timestamp) return ''
+                        return new Date(timestamp).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
                           hour: 'numeric',
