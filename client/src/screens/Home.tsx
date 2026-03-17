@@ -138,7 +138,7 @@ export function Home() {
                 margin={{
                   left: 12,
                   right: 12,
-                  top: 4,
+                  top: timeRanges.length > 1 ? 32 : 4,
                 }}
               >
                 <CartesianGrid vertical={false} />
