@@ -47,10 +47,8 @@ export function Home() {
 
   const dataSpanDays = useMemo(() => {
     if (!allNetworthData || allNetworthData.length < 2) return 0
-    const first = new Date(allNetworthData[0].timestamp).getTime()
-    const last = new Date(
-      allNetworthData[allNetworthData.length - 1].timestamp
-    ).getTime()
+    const first = allNetworthData[0].timestamp
+    const last = allNetworthData[allNetworthData.length - 1].timestamp
     return (last - first) / (24 * 60 * 60 * 1000)
   }, [allNetworthData])
 
@@ -70,9 +68,7 @@ export function Home() {
     if (!allNetworthData) return undefined
     if (selectedRange === undefined) return allNetworthData
     const cutoff = Date.now() - selectedRange * 24 * 60 * 60 * 1000
-    return allNetworthData.filter(
-      (item) => new Date(item.timestamp).getTime() >= cutoff
-    )
+    return allNetworthData.filter((item) => item.timestamp >= cutoff)
   }, [allNetworthData, selectedRange])
 
   return (
@@ -144,6 +140,9 @@ export function Home() {
                 <CartesianGrid vertical={false} />
                 <XAxis
                   dataKey="timestamp"
+                  type="number"
+                  scale="time"
+                  domain={['dataMin', 'dataMax']}
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
@@ -167,7 +166,7 @@ export function Home() {
                 <ChartTooltip
                   content={
                     <ChartTooltipContent
-                      indicator="line"
+                      indicator="dot"
                       labelFormatter={(value) => {
                         const date = new Date(value)
                         return date.toLocaleDateString('en-US', {

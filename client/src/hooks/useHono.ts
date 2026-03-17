@@ -121,6 +121,7 @@ export function useNetworthTimeSeries(currency: string | undefined) {
         .filter((item) => currency === 'ETH' || item.usdValue != null)
         .map((item) => ({
           ...item,
+          timestamp: new Date(item.timestamp).getTime(),
           value: currency === 'ETH' ? item.ethValue : (item.usdValue as number),
         }))
     },
