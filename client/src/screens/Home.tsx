@@ -1,6 +1,8 @@
+import { useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 import { RefreshPortfolioButton } from '@/components/PortfolioCard'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   ChartConfig,
@@ -17,6 +19,14 @@ import {
 } from '@/hooks/useHono'
 import { cn, formatCurrency } from '@/lib/utils'
 
+const allTimeRanges = [
+  { label: '1M', days: 30 },
+  { label: '3M', days: 90 },
+  { label: '6M', days: 180 },
+  { label: '1Y', days: 365 },
+  { label: 'All', days: undefined },
+] as const
+
 const chartConfig = {
   value: {
     label: 'Value',
@@ -32,7 +42,38 @@ export function Home() {
   const { currency } = useCurrency()
   const { data: fiat } = useFiat()
   const ethValuesByAccount = useEthValuesByAccount()
-  const { data: networthTimeSeries } = useNetworthTimeSeries(currency)
+  const { data: allNetworthData } = useNetworthTimeSeries(currency)
+  const [selectedRange, setSelectedRange] = useState<number | undefined>(90)
+
+  const dataSpanDays = useMemo(() => {
+    if (!allNetworthData || allNetworthData.length < 2) return 0
+    const first = new Date(allNetworthData[0].timestamp).getTime()
+    const last = new Date(
+      allNetworthData[allNetworthData.length - 1].timestamp
+    ).getTime()
+    return (last - first) / (24 * 60 * 60 * 1000)
+  }, [allNetworthData])
+
+  const timeRanges = useMemo(() => {
+    // Show a range option only if data spans beyond the previous smaller range
+    // e.g. show "3M" only if we have more than 30 days of data
+    return allTimeRanges.filter((range) => {
+      if (range.days === undefined) return true // "All" always shown
+      // Find the previous range's days (the one before this in the list)
+      const idx = allTimeRanges.indexOf(range)
+      const prevDays = idx > 0 ? allTimeRanges[idx - 1].days ?? 0 : 0
+      return dataSpanDays > prevDays
+    })
+  }, [dataSpanDays])
+
+  const networthTimeSeries = useMemo(() => {
+    if (!allNetworthData) return undefined
+    if (selectedRange === undefined) return allNetworthData
+    const cutoff = Date.now() - selectedRange * 24 * 60 * 60 * 1000
+    return allNetworthData.filter(
+      (item) => new Date(item.timestamp).getTime() >= cutoff
+    )
+  }, [allNetworthData, selectedRange])
 
   return (
     <>
@@ -72,6 +113,21 @@ export function Home() {
                 'lg:block'
             )}
           >
+            {timeRanges.length > 1 && (
+              <div className="absolute right-0 top-0 z-10 flex gap-1">
+                {timeRanges.map((range) => (
+                  <Button
+                    key={range.label}
+                    variant={selectedRange === range.days ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setSelectedRange(range.days)}
+                  >
+                    {range.label}
+                  </Button>
+                ))}
+              </div>
+            )}
             <ChartContainer
               config={chartConfig}
               className="aspect-auto h-[250px] w-full"
@@ -97,6 +153,9 @@ export function Home() {
                     return date.toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
+                      ...((selectedRange ?? 366) > 180 && {
+                        year: '2-digit',
+                      }),
                     })
                   }}
                 />

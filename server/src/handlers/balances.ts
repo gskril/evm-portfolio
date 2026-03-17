@@ -208,7 +208,6 @@ export async function getNetworthTimeSeries(c: Context) {
   const networth = await db
     .selectFrom('networth')
     .selectAll()
-    .limit(60)
     .orderBy('timestamp', 'desc')
     .execute()
 
