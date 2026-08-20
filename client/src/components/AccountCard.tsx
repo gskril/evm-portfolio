@@ -1,20 +1,24 @@
-import { VariantProps } from 'class-variance-authority'
+import type { VariantProps } from 'class-variance-authority'
 import { Pencil, Trash } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { zfd } from 'zod-form-data'
 
 import {
   honoClient,
+  throwIfNotOk,
   useAccounts,
   useBalances,
   useEthValuesByAccount,
 } from '../hooks/useHono'
-import { Button, buttonVariants } from './ui/button'
+import { Button } from './ui/button'
+import { buttonVariants } from './ui/button-variants'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -56,14 +60,14 @@ export function AccountCard() {
           </TableHeader>
           <TableBody>
             {accounts.data?.map((account) => (
-              <TableRow key={account.address}>
+              <TableRow key={account.id}>
                 <TableCell>{account.name}</TableCell>
                 <TableCell>{account.description}</TableCell>
                 <TableCell>{account.address}</TableCell>
 
                 <TableCell className="flex justify-end gap-2">
                   <AccountDialog
-                    address={account.address}
+                    accountId={account.id}
                     prompt="Edit"
                     size="icon"
                     variant="outline"
@@ -72,10 +76,19 @@ export function AccountCard() {
                   <Button
                     variant="outline"
                     size="icon"
+                    aria-label={`Delete ${account.name}`}
                     onClick={async () => {
-                      const promise = honoClient.accounts[':id'].$delete({
-                        param: { id: account.id.toString() },
-                      })
+                      if (
+                        !window.confirm(
+                          `Delete ${account.name}? Its saved balances will also be removed.`
+                        )
+                      ) {
+                        return
+                      }
+
+                      const promise = honoClient.accounts[':id']
+                        .$delete({ param: { id: account.id.toString() } })
+                        .then(throwIfNotOk)
 
                       toast.promise(promise, {
                         loading: 'Deleting account...',
@@ -109,17 +122,18 @@ const addAccountSchema = zfd.formData({
 })
 
 function AccountDialog({
-  address,
+  accountId,
   prompt,
   ...buttonProps
 }: {
-  address?: string | null
+  accountId?: number
   prompt: 'Add' | 'Edit'
 } & VariantProps<typeof buttonVariants>) {
   const accounts = useAccounts()
   const { refetch: refetchOffchainAccounts } = useAccounts('offchain')
+  const [open, setOpen] = useState(false)
   const selectedAccount = accounts.data?.find(
-    (account) => account.address === address
+    (account) => account.id === accountId
   )
 
   async function handleAddAccount(e: React.FormEvent<HTMLFormElement>) {
@@ -133,31 +147,45 @@ function AccountDialog({
     }
 
     const json = safeParse.data
-    const promise = honoClient.accounts.$post({ json })
+    const promise = honoClient.accounts
+      .$post({ json })
+      .then(throwIfNotOk)
+      .then(() => {
+        accounts.refetch()
+        refetchOffchainAccounts()
+        setOpen(false)
+      })
 
     toast.promise(promise, {
       loading: `${prompt}ing account...`,
-      success: () => {
-        accounts.refetch()
-        refetchOffchainAccounts()
-        return `${prompt}ed account`
-      },
-      error: {
-        message: `Failed to ${prompt.toLowerCase()} account`,
-      },
+      success: `${prompt}ed account`,
+      error: (error: unknown) =>
+        error instanceof Error
+          ? error.message
+          : `Failed to ${prompt.toLowerCase()} account`,
     })
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button {...buttonProps}>
+        <Button
+          {...buttonProps}
+          aria-label={
+            buttonProps.size === 'icon'
+              ? `${prompt} ${selectedAccount?.name ?? 'account'}`
+              : undefined
+          }
+        >
           {buttonProps.size === 'icon' ? <Pencil /> : prompt}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{prompt} Account</DialogTitle>
+          <DialogDescription>
+            Track an onchain address or a manual offchain account.
+          </DialogDescription>
         </DialogHeader>
 
         <form
@@ -165,7 +193,7 @@ function AccountDialog({
           onSubmit={handleAddAccount}
           className="flex flex-col gap-4"
         >
-          <input type="hidden" name="id" value={selectedAccount?.id} />
+          <input type="hidden" name="id" value={selectedAccount?.id ?? ''} />
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name" className="gap-1">
@@ -175,6 +203,7 @@ function AccountDialog({
               </span>
             </Label>
             <Input
+              id="name"
               name="name"
               autoComplete="off"
               data-1p-ignore
@@ -189,12 +218,18 @@ function AccountDialog({
                 (optional)
               </span>
             </Label>
-            <Input name="description" autoComplete="off" />
+            <Input
+              id="description"
+              name="description"
+              autoComplete="off"
+              defaultValue={selectedAccount?.description ?? ''}
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="addressOrName">Address or ENS name</Label>
             <Input
+              id="addressOrName"
               name="addressOrName"
               defaultValue={selectedAccount?.address ?? ''}
               disabled={!!selectedAccount?.id}

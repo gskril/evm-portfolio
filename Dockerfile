@@ -6,14 +6,15 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json .
+COPY bun.lock .
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 
-# Copy source code first
-COPY . .
-
 # Install dependencies
 RUN bun install --ignore-scripts
+
+# Copy application source after installing dependencies to preserve layer caching.
+COPY . .
 
 # Build server first
 WORKDIR /app/server

@@ -1,16 +1,19 @@
-import { VariantProps } from 'class-variance-authority'
+import type { VariantProps } from 'class-variance-authority'
 import { Pencil, Trash } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { zfd } from 'zod-form-data'
 
 import {
   honoClient,
+  throwIfNotOk,
   useBalances,
   useChains,
   useEthValuesByAccount,
   useTokens,
 } from '../hooks/useHono'
-import { Button, buttonVariants } from './ui/button'
+import { Button } from './ui/button'
+import { buttonVariants } from './ui/button-variants'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import {
   Dialog,
@@ -51,9 +54,19 @@ export function ChainCard() {
   const { refetch: refetchBalancesByAccount } = useEthValuesByAccount()
 
   function handleDeleteChain(chainId: number) {
-    const promise = honoClient.chains[':id'].$delete({
-      param: { id: chainId.toString() },
-    })
+    const chain = chains.data?.find((item) => item.id === chainId)
+
+    if (
+      !window.confirm(
+        `Delete ${chain?.name ?? 'this chain'}? Its tokens and saved balances will also be removed.`
+      )
+    ) {
+      return
+    }
+
+    const promise = honoClient.chains[':id']
+      .$delete({ param: { id: chainId.toString() } })
+      .then(throwIfNotOk)
 
     toast.promise(promise, {
       loading: 'Deleting chain...',
@@ -78,7 +91,7 @@ export function ChainCard() {
           <Button
             variant="secondary"
             onClick={async () => {
-              const promise = honoClient.setup.chains.$post()
+              const promise = honoClient.setup.chains.$post().then(throwIfNotOk)
 
               toast.promise(promise, {
                 loading: 'Adding default chains...',
@@ -125,6 +138,7 @@ export function ChainCard() {
                     <Button
                       variant="outline"
                       size="icon"
+                      aria-label={`Delete ${chain.name}`}
                       onClick={() => handleDeleteChain(chain.id)}
                     >
                       <Trash />
@@ -133,10 +147,6 @@ export function ChainCard() {
                 </TableCell>
               </TableRow>
             ))}
-            {/* <TableCell className="font-medium">INV001</TableCell>
-              <TableCell>Paid</TableCell>
-              <TableCell>Credit Card</TableCell>
-              <TableCell className="text-right">$250.00</TableCell> */}
           </TableBody>
         </Table>
       </CardContent>
@@ -153,6 +163,7 @@ function ChainDialog({
   chainId?: number
 } & VariantProps<typeof buttonVariants>) {
   const chains = useChains()
+  const [open, setOpen] = useState(false)
   const selectedChain = chains.data?.find((chain) => chain.id === chainId)
 
   async function handleAddChain(e: React.FormEvent<HTMLFormElement>) {
@@ -166,14 +177,17 @@ function ChainDialog({
     }
 
     const json = safeParse.data
-    const promise = honoClient.chains.$post({ json })
+    const promise = honoClient.chains
+      .$post({ json })
+      .then(throwIfNotOk)
+      .then(() => {
+        chains.refetch()
+        setOpen(false)
+      })
 
     toast.promise(promise, {
-      loading: 'Adding chain...',
-      success: () => {
-        chains.refetch()
-        return 'Chain added'
-      },
+      loading: `${prompt}ing chain...`,
+      success: `Chain ${prompt === 'Add' ? 'added' : 'updated'}`,
       error: {
         message: 'Failed to add chain',
         description: 'Make sure the RPC URL is working',
@@ -182,9 +196,16 @@ function ChainDialog({
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button {...buttonProps}>
+        <Button
+          {...buttonProps}
+          aria-label={
+            buttonProps.size === 'icon'
+              ? `${prompt} ${selectedChain?.name ?? 'chain'}`
+              : undefined
+          }
+        >
           {buttonProps.size === 'icon' ? <Pencil /> : prompt}
         </Button>
       </DialogTrigger>
@@ -214,6 +235,7 @@ function ChainDialog({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Name</Label>
             <Input
+              id="name"
               name="name"
               placeholder="Ethereum"
               autoComplete="off"
@@ -225,6 +247,7 @@ function ChainDialog({
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="rpcUrl">RPC URL</Label>
             <Input
+              id="rpcUrl"
               name="rpcUrl"
               placeholder="https://eth.drpc.org"
               defaultValue={selectedChain?.rpcUrl}

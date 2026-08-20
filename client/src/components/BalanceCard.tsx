@@ -1,6 +1,8 @@
-import { VariantProps } from 'class-variance-authority'
+import type { VariantProps } from 'class-variance-authority'
 import { Pencil, Trash } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 import { zfd } from 'zod-form-data'
 
 import {
@@ -12,12 +14,14 @@ import {
 } from '@/components/ui/select'
 import {
   honoClient,
+  throwIfNotOk,
   useAccounts,
   useOffchainBalances,
   useTokens,
 } from '@/hooks/useHono'
 
-import { Button, buttonVariants } from './ui/button'
+import { Button } from './ui/button'
+import { buttonVariants } from './ui/button-variants'
 import {
   Card,
   CardContent,
@@ -28,6 +32,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -92,13 +97,24 @@ export function BalanceCard() {
                   <Button
                     variant="outline"
                     size="icon"
+                    aria-label={`Delete ${balance.token.name} balance for ${balance.owner.name}`}
                     onClick={() => {
-                      const promise = honoClient.balances.offchain.$delete({
-                        json: {
-                          account: balance.owner.id,
-                          token: balance.token.id,
-                        },
-                      })
+                      if (
+                        !window.confirm(
+                          `Delete the ${balance.token.name} balance for ${balance.owner.name}?`
+                        )
+                      ) {
+                        return
+                      }
+
+                      const promise = honoClient.balances.offchain
+                        .$delete({
+                          json: {
+                            account: balance.owner.id,
+                            token: balance.token.id,
+                          },
+                        })
+                        .then(throwIfNotOk)
 
                       toast.promise(promise, {
                         loading: 'Deleting...',
@@ -125,7 +141,7 @@ export function BalanceCard() {
 const balanceFormSchema = zfd.formData({
   account: zfd.numeric(),
   token: zfd.numeric(),
-  amount: zfd.numeric(),
+  amount: zfd.numeric(z.number().nonnegative()),
 })
 
 function BalanceDialog({
@@ -139,12 +155,11 @@ function BalanceDialog({
   const offchainBalances = useOffchainBalances()
   const accounts = useAccounts('offchain')
   const tokens = useTokens()
+  const [open, setOpen] = useState(false)
 
   const defaultAccount = data?.owner.id?.toString()
   const defaultToken = data?.token.id?.toString()
   const defaultAmount = data?.balance?.toString()
-
-  console.log({ defaultAccount, defaultToken, defaultAmount })
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -152,30 +167,37 @@ function BalanceDialog({
     const safeParse = balanceFormSchema.safeParse(formData)
 
     if (safeParse.error) {
-      console.log(safeParse.error)
       toast.error('Invalid form data')
       return
     }
 
     const json = safeParse.data
-    const promise = honoClient.balances.offchain.$post({ json })
-    toast.promise(promise, {
-      loading: 'Saving...',
-      success: () => {
+    const promise = honoClient.balances.offchain
+      .$post({ json })
+      .then(throwIfNotOk)
+      .then(() => {
         tokens.refetch()
         offchainBalances.refetch()
-        return 'Balance saved'
-      },
+        setOpen(false)
+      })
+    toast.promise(promise, {
+      loading: 'Saving...',
+      success: 'Balance saved',
       error: 'Failed to save balance',
     })
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           {...buttonProps}
-          disabled={!accounts.data || accounts.data.length === 0}
+          aria-label={
+            buttonProps.size === 'icon'
+              ? `${prompt} ${data?.token.name ?? 'token'} balance for ${data?.owner.name ?? 'account'}`
+              : undefined
+          }
+          disabled={!accounts.data?.length || !tokens.data?.length}
         >
           {buttonProps.size === 'icon' ? <Pencil /> : prompt}
         </Button>
@@ -183,6 +205,9 @@ function BalanceDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{prompt} Balance</DialogTitle>
+          <DialogDescription>
+            Set the token amount held in a manual account.
+          </DialogDescription>
         </DialogHeader>
 
         {(() => {
@@ -198,11 +223,12 @@ function BalanceDialog({
                 className="flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="name" className="gap-1">
+                  <Label htmlFor="account" className="gap-1">
                     Account
                   </Label>
                   <Select name="account" defaultValue={defaultAccount}>
                     <SelectTrigger
+                      id="account"
                       className="w-full"
                       disabled={!!defaultAccount}
                     >
@@ -222,9 +248,13 @@ function BalanceDialog({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="description">Token</Label>
+                  <Label htmlFor="token">Token</Label>
                   <Select name="token" defaultValue={defaultToken}>
-                    <SelectTrigger className="w-full" disabled={!!defaultToken}>
+                    <SelectTrigger
+                      id="token"
+                      className="w-full"
+                      disabled={!!defaultToken}
+                    >
                       <SelectValue placeholder="Select a token" />
                     </SelectTrigger>
                     <SelectContent>
@@ -240,8 +270,10 @@ function BalanceDialog({
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="amount">Amount</Label>
                   <Input
+                    id="amount"
                     name="amount"
                     type="number"
+                    min="0"
                     step="any"
                     required
                     defaultValue={defaultAmount}

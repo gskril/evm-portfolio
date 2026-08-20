@@ -41,10 +41,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { data: offchainAccounts } = useAccounts('offchain')
 
   return (
-    <div className="grid grid-cols-[10rem_1fr] lg:grid-cols-[15rem_1fr]">
-      <aside className="sticky top-0 flex h-svh flex-col justify-between border-r p-2 lg:p-6">
-        <nav>
-          <ul>
+    <div className="min-h-svh md:grid md:grid-cols-[10rem_minmax(0,1fr)] lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="bg-background border-b p-3 md:sticky md:top-0 md:flex md:h-svh md:flex-col md:justify-between md:border-r md:border-b-0 md:p-2 lg:p-6">
+        <nav aria-label="Primary navigation">
+          <ul className="flex gap-1 overflow-x-auto pb-1 md:block md:overflow-visible md:pb-0">
             {links.map((link) => (
               <li
                 key={link.to}
@@ -57,7 +57,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link
                   to={link.to}
                   className={cn(
-                    'block rounded px-2 py-1',
+                    'block rounded px-2 py-1 whitespace-nowrap',
                     pathname === link.to && 'bg-gray-100 font-medium'
                   )}
                 >
@@ -68,17 +68,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </ul>
         </nav>
 
-        <div className="flex flex-col gap-2">
+        <div className="mt-3 flex items-center justify-between gap-3 md:mt-0 md:flex-col md:items-stretch md:gap-2">
           <CurrencySelector />
 
-          <span className="text-muted-foreground text-sm">
-            {queues.data?.inProgress} jobs in progress
+          <span className="text-muted-foreground text-sm whitespace-nowrap">
+            {queues.data?.inProgress ?? 0} jobs in progress
           </span>
 
           {!!queues.data?.failed && (
             <a
               href={`${SERVER_URL}/dashboard`}
               target="_blank"
+              rel="noreferrer"
               className="border-destructive bg-destructive/10 text-destructive flex items-center gap-2 rounded-md border p-2 text-sm"
             >
               {queues.data.failed} jobs failed{' '}
@@ -88,7 +89,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex min-h-svh w-full max-w-full flex-col gap-4 bg-neutral-50 p-4 lg:gap-6 lg:p-6">
+      <main className="flex min-h-svh w-full max-w-full min-w-0 flex-col gap-4 bg-neutral-50 p-4 lg:gap-6 lg:p-6">
         {children}
       </main>
     </div>

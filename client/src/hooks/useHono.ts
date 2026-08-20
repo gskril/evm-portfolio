@@ -8,6 +8,26 @@ export const SERVER_URL = '/api'
 
 export const honoClient: Client = hc(SERVER_URL) as unknown as Client
 
+export async function throwIfNotOk<T extends Response>(response: T) {
+  if (response.ok) {
+    return response
+  }
+
+  let message = `Request failed (${response.status})`
+
+  try {
+    const body = (await response.clone().json()) as { error?: unknown }
+
+    if (typeof body.error === 'string') {
+      message = body.error
+    }
+  } catch {
+    // Keep the status-based fallback for non-JSON error responses.
+  }
+
+  throw new Error(message)
+}
+
 export function useAccounts(type?: 'onchain' | 'offchain') {
   return useQuery({
     queryKey: ['accounts', type],
@@ -17,6 +37,7 @@ export function useAccounts(type?: 'onchain' | 'offchain') {
           type,
         },
       })
+      await throwIfNotOk(res)
       return res.json()
     },
   })
@@ -27,6 +48,7 @@ export function useChains() {
     queryKey: ['chains'],
     queryFn: async () => {
       const res = await honoClient.chains.$get()
+      await throwIfNotOk(res)
       return res.json()
     },
   })
@@ -37,6 +59,7 @@ export function useTokens() {
     queryKey: ['tokens'],
     queryFn: async () => {
       const res = await honoClient.tokens.$get()
+      await throwIfNotOk(res)
       return res.json()
     },
   })
@@ -50,6 +73,7 @@ export function useBalances() {
     queryKey: ['balances', queues?.inProgress ?? 0],
     queryFn: async () => {
       const res = await honoClient.balances.$get()
+      await throwIfNotOk(res)
       const json = await res.json()
 
       const ethValueByChain = json.tokens.reduce(
@@ -85,6 +109,7 @@ export function useFiat() {
     queryKey: ['fiat', mainnetIsConfigured],
     queryFn: async () => {
       const res = await honoClient.fiat.$get()
+      await throwIfNotOk(res)
       const array = await res.json()
 
       function getRate(key: string | undefined) {
@@ -102,6 +127,7 @@ export function useEthValuesByAccount() {
     queryKey: ['ethValuesByAccount'],
     queryFn: async () => {
       const res = await honoClient.balances.accounts.$get()
+      await throwIfNotOk(res)
       return res.json()
     },
   })
@@ -112,17 +138,25 @@ export function useNetworthTimeSeries(currency: string | undefined) {
     queryKey: ['networthTimeSeries', currency],
     queryFn: async () => {
       const res = await honoClient.balances.networth.$get()
+      await throwIfNotOk(res)
       const json = await res.json()
 
       // For ETH: all records are valid (they all have ethValue)
       // For USD: only records with usdValue are valid
-      return json
-        .filter((item) => currency === 'ETH' || item.usdValue != null)
-        .map((item) => ({
-          ...item,
-          timestamp: new Date(item.timestamp).getTime(),
-          value: currency === 'ETH' ? item.ethValue : (item.usdValue as number),
-        }))
+      const items = []
+
+      for (const item of json) {
+        if (currency === 'ETH' || item.usdValue != null) {
+          items.push({
+            ...item,
+            timestamp: new Date(item.timestamp).getTime(),
+            value:
+              currency === 'ETH' ? item.ethValue : (item.usdValue as number),
+          })
+        }
+      }
+
+      return items
     },
   })
 }
@@ -132,6 +166,7 @@ export function useOffchainBalances() {
     queryKey: ['offchainBalances'],
     queryFn: async () => {
       const res = await honoClient.balances.offchain.$get()
+      await throwIfNotOk(res)
       return res.json()
     },
   })

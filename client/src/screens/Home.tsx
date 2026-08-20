@@ -59,7 +59,7 @@ export function Home() {
       if (range.days === undefined) return true // "All" always shown
       // Find the previous range's days (the one before this in the list)
       const idx = allTimeRanges.indexOf(range)
-      const prevDays = idx > 0 ? allTimeRanges[idx - 1].days ?? 0 : 0
+      const prevDays = idx > 0 ? (allTimeRanges[idx - 1].days ?? 0) : 0
       return dataSpanDays > prevDays
     })
   }, [dataSpanDays])
@@ -110,7 +110,7 @@ export function Home() {
             )}
           >
             {timeRanges.length > 1 && (
-              <div className="absolute right-0 top-0 z-10 flex gap-1">
+              <div className="absolute top-0 right-0 z-10 flex gap-1">
                 {timeRanges.map((range) => (
                   <Button
                     key={range.label}
@@ -227,7 +227,7 @@ export function Home() {
           <CardContent className="flex flex-col gap-2">
             {ethValuesByAccount.data?.map((account) => (
               <div
-                key={account.owner.address}
+                key={account.owner.id}
                 className="flex items-center justify-between gap-4"
               >
                 <span>{account.owner.name}</span>

@@ -76,6 +76,7 @@ export const up = async (db: Kysely<any>) => {
 
 export const down = async (db: Kysely<any>) => {
   // Delete in reverse order of above so that foreign keys are not violated.
+  await db.schema.dropTable('networth').ifExists().execute()
   await db.schema.dropTable('balances').ifExists().execute()
   await db.schema.dropTable('tokens').ifExists().execute()
   await db.schema.dropTable('accounts').ifExists().execute()
