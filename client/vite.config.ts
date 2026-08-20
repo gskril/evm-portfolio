@@ -3,21 +3,27 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import { defineConfig } from 'vite'
 
-const apiProxy = {
+const backendTarget = 'http://127.0.0.1:8579'
+
+const backendProxy = {
   '/api': {
-    target: 'http://127.0.0.1:8579',
+    target: backendTarget,
     changeOrigin: true,
     rewrite: (requestPath: string) => requestPath.replace(/^\/api/, ''),
+  },
+  '/dashboard': {
+    target: backendTarget,
+    changeOrigin: true,
   },
 }
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    proxy: apiProxy,
+    proxy: backendProxy,
   },
   preview: {
-    proxy: apiProxy,
+    proxy: backendProxy,
   },
   resolve: {
     alias: {
