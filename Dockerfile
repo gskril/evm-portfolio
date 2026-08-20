@@ -31,14 +31,14 @@ WORKDIR /app
 # Copy built artifacts and dependencies
 COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/client/dist ./client/dist
+COPY --from=builder /app/client/vite.config.ts ./client/vite.config.ts
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json .
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 
-# Expose ports for client and server
-EXPOSE 8579 8580
+# Only the Vite preview server is public; it proxies /api to the backend.
+EXPOSE 8580
 
 # Start both applications using concurrently
 CMD ["bun", "run", "start"]
-
