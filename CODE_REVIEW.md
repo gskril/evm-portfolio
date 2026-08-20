@@ -32,7 +32,7 @@ The confirmed UI findings were fixed and are documented with reproduction eviden
 
 ### Performance and maintainability
 
-1. **Lazy-load the chart path.** The production bundle is about 913 kB minified (269 kB gzip), primarily because Recharts is loaded on the initial Home route even when the chart is hidden or the installation has too little history. Move the chart into a dynamically imported component and load it only when history and viewport conditions require it.
+1. **Lazy-load the chart path.** The production bundle is about 904 kB minified (261 kB gzip), primarily because Recharts is loaded on the initial Home route even when the chart is hidden or the installation has too little history. Move the chart into a dynamically imported component and load it only when history and viewport conditions require it.
 2. **Add tests around the data edges.** There is no automated test suite. Highest-value first tests: manual-account edit targeting, default token metadata, fiat fallback, empty-database queries, migration up/down, and queue-worker calculations.
 3. **Make CI run lint/tests and use a frozen toolchain.** CI currently builds only. Add client lint, future tests, `bun audit`/dependency scanning, and a pinned Bun version with frozen-lockfile installation.
 4. **Replace Vite preview in the production container.** A minimal static server or serving the built client from Hono would reduce the runtime dependency and vulnerability surface.

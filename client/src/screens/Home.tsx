@@ -67,7 +67,9 @@ export function Home() {
   const networthTimeSeries = useMemo(() => {
     if (!allNetworthData) return undefined
     if (selectedRange === undefined) return allNetworthData
-    const cutoff = Date.now() - selectedRange * 24 * 60 * 60 * 1000
+    const latestTimestamp = allNetworthData.at(-1)?.timestamp
+    if (latestTimestamp === undefined) return allNetworthData
+    const cutoff = latestTimestamp - selectedRange * 24 * 60 * 60 * 1000
     return allNetworthData.filter((item) => item.timestamp >= cutoff)
   }, [allNetworthData, selectedRange])
 

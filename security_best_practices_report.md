@@ -4,7 +4,7 @@
 
 The application is reasonably safe against conventional frontend XSS: portfolio data is rendered through React's escaped JSX, the only `dangerouslySetInnerHTML` use generates CSS from a static chart configuration, no secrets are embedded in the client bundle, and there is no token/session storage. The main risk is the trust model around a powerful, unauthenticated local API. It accepts arbitrary RPC destinations, exposes portfolio and queue data, and currently opts every web origin into CORS. That is safe only while both ports remain unreachable to untrusted clients and the operator never visits a malicious page while the direct API is running.
 
-Prioritized result: 3 high, 3 medium, and 1 low finding. The most urgent low-regression change is to remove or tightly restrict wildcard CORS. Authentication and RPC-destination policy need an explicit product decision because this project intentionally supports private local nodes.
+Prioritized result: 3 high, 2 unresolved medium, 1 resolved medium, and 1 low finding. The most urgent low-regression change is to remove or tightly restrict wildcard CORS. Authentication and RPC-destination policy need an explicit product decision because this project intentionally supports private local nodes.
 
 ## High severity
 
@@ -65,16 +65,17 @@ Prioritized result: 3 high, 3 medium, and 1 low finding. The most urgent low-reg
 - **Mitigation:** Set these headers at an upstream proxy if Vite preview remains temporarily.
 - **False-positive notes:** An external reverse proxy may already add headers in a deployment not represented by this repository. Verify the final public response.
 
-### SEC-006 — Dependency audit reports vulnerable build/runtime transitive packages
+### SEC-006 — Resolved: dependency audit reported vulnerable transitive packages
 
 - **Rule ID:** REACT-SUPPLY-001
 - **Severity:** Medium overall; several individual advisories are rated High/Critical
+- **Status:** Resolved on 2026-08-20
 - **Location:** `bun.lock`; dependency definitions in `package.json`, `client/package.json`, and `server/package.json`; runtime dependency copy in `Dockerfile:31-38`
-- **Evidence:** `bun audit` on 2026-08-20 reported 60 advisories: 2 critical, 35 high, 17 moderate, and 6 low. Affected trees include Vite/Rollup/PostCSS, Tailwind/node-tar, ESLint transitive packages, and `concurrently`/`shell-quote`. The runtime image copies the complete root `node_modules` because it launches Vite preview and `concurrently` in production.
-- **Impact:** Most findings require malicious build inputs or affected library APIs and are not directly exposed by normal portfolio requests, but the production image unnecessarily carries the vulnerable build toolchain. A compromised dependency or crafted build input can affect CI artifacts.
-- **Fix:** Update within compatible ranges, re-audit, and replace Vite preview in production with a minimal static server so the runtime image can contain production dependencies only.
+- **Evidence:** The initial `bun audit` reported 60 advisories: 2 critical, 35 high, 17 moderate, and 6 low. Compatible dependency updates, targeted Vite 8 and ESLint 10 upgrades, and a patched `flatted` transitive override reduced the final `bun audit` result to **No vulnerabilities found**.
+- **Impact:** The known vulnerable build-tool transitive packages are no longer present in the resolved dependency graph.
+- **Fix:** Completed. Continue running `bun audit` in CI and reviewing lockfile updates.
 - **Mitigation:** Build from reviewed lockfile changes, use immutable CI artifacts, and avoid processing untrusted archives/config files in the build pipeline.
-- **False-positive notes:** Audit severity does not equal application exploitability. Each remaining advisory should be evaluated against the exact invoked code path after upgrades.
+- **False-positive notes:** The production image still carries build tooling because it launches Vite preview and `concurrently`; replacing that runtime arrangement remains a defense-in-depth improvement even though the current audit is clean.
 
 ## Low severity
 
