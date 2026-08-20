@@ -35,8 +35,8 @@ services:
       - 8580:8580
     environment:
       - REDIS_URL=redis://redis:6379
-      # Allow Vite Preview to serve the app through this reverse-proxy hostname.
-      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=portfolio.nuc.gregskril.com
+      # Use this if you visit your local server from a different hostname
+      # - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=
     depends_on:
       - redis
     volumes:
