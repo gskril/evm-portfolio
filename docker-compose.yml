@@ -6,13 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '8579:8579' # Server port
       - '8580:8580' # Client port
     volumes:
       - sqlite_data:/app/data
     environment:
       - REDIS_URL=redis://redis:6379
       - NODE_ENV=production
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=portfolio.nuc.gregskril.com
     command: bun run start
     depends_on:
       redis:

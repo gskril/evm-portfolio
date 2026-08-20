@@ -4,8 +4,7 @@ import { Client } from 'server/hc'
 
 import { useQueues } from './useQueues'
 
-const url = new URL(window.location.origin)
-export const SERVER_URL = url.protocol + '//' + url.hostname + ':8579'
+export const SERVER_URL = '/api'
 
 export const honoClient: Client = hc(SERVER_URL) as unknown as Client
 
