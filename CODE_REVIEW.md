@@ -4,7 +4,7 @@
 
 The project has a clean, understandable shape and a good local-first premise. TypeScript strictness, Kysely parameterization, React's escaped rendering, foreign keys, and a workspace lockfile provide a solid baseline. The review found one high-impact data-integrity bug in manual-account editing, several mobile/accessibility problems, stale or misleading numeric metadata, a broken container health check, and meaningful deployment/security hardening work.
 
-The confirmed UI findings were fixed and are documented with reproduction evidence in `dogfood-output/report.md`. Security findings and threat-model tradeoffs are in `security_best_practices_report.md`.
+The confirmed UI findings were fixed after desktop, phone, and tablet browser walkthroughs. Remaining recommendations are summarized below.
 
 ## Improvements applied
 
@@ -34,7 +34,7 @@ The confirmed UI findings were fixed and are documented with reproduction eviden
 
 1. **Lazy-load the chart path.** The production bundle is about 904 kB minified (261 kB gzip), primarily because Recharts is loaded on the initial Home route even when the chart is hidden or the installation has too little history. Move the chart into a dynamically imported component and load it only when history and viewport conditions require it.
 2. **Add tests around the data edges.** There is no automated test suite. Highest-value first tests: manual-account edit targeting, default token metadata, fiat fallback, empty-database queries, migration up/down, and queue-worker calculations.
-3. **Make CI run lint/tests and use a frozen toolchain.** CI currently builds only. Add client lint, future tests, `bun audit`/dependency scanning, and a pinned Bun version with frozen-lockfile installation.
+3. **Make CI run lint/tests and dependency scanning.** CI uses a pinned Bun version and frozen lockfile but still builds only. Add client lint, future tests, and `bun audit`/dependency scanning.
 4. **Replace Vite preview in the production container.** A minimal static server or serving the built client from Hono would reduce the runtime dependency and vulnerability surface.
 5. **Refresh documentation.** `client/README.md` is still Vite template text, while `server/README.md` has an incomplete endpoint checklist that no longer describes the API.
 

@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 
 import { addAccount, deleteAccount, getAccounts } from './handlers/accounts'
 import {
@@ -17,7 +16,8 @@ import { setupDefaultChains, setupDefaultTokens } from './handlers/setup'
 import { addToken, deleteToken, getTokens } from './handlers/tokens'
 
 export const api = new Hono()
-api.use(cors())
+// Browser traffic arrives through the same-origin Vite proxy. Do not enable
+// cross-origin access here without an explicit, deployment-specific allowlist.
 
 // API Routes
 export const routes = api
