@@ -30,8 +30,8 @@ export async function getRateToEth({ address, chainId, decimals }: Props) {
     args: [address, true],
   })
 
-  const numerator = BigInt(10 ** decimals)
-  const denominator = BigInt(10 ** 18) // 18 for ETH decimals
+  const numerator = 10n ** BigInt(decimals)
+  const denominator = 10n ** 18n // 18 for ETH decimals
   const priceInEth = (rate * numerator) / denominator
 
   return Number(formatEther(priceInEth))

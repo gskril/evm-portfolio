@@ -1,11 +1,16 @@
 import { ChevronDownIcon, RefreshCcwIcon } from 'lucide-react'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useQueues } from '@/hooks/useQueues'
 
 import { useCurrency } from '../hooks/useCurrency'
-import { honoClient, useBalances, useFiat } from '../hooks/useHono'
+import {
+  honoClient,
+  throwIfNotOk,
+  useBalances,
+  useFiat,
+} from '../hooks/useHono'
 import { formatCurrency, toFixed } from '../lib/utils'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -61,18 +66,24 @@ export function PortfolioCard() {
               const isExpanded = expandedRows.has(token.id)
 
               return (
-                <>
-                  <TableRow
-                    key={token.id}
-                    className="cursor-pointer"
-                    onClick={() => toggleRow(token.id)}
-                  >
+                <Fragment key={token.id}>
+                  <TableRow>
                     <TableCell>
-                      <ChevronDownIcon
-                        className={`h-4 w-4 transition-transform ${
-                          isExpanded ? 'rotate-180' : ''
-                        }`}
-                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="-ml-2"
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${token.name} account breakdown`}
+                        aria-expanded={isExpanded}
+                        onClick={() => toggleRow(token.id)}
+                      >
+                        <ChevronDownIcon
+                          aria-hidden="true"
+                          className={`h-4 w-4 transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </Button>
                     </TableCell>
                     <TableCell>{token.chain.name}</TableCell>
                     <TableCell title={token.symbol}>{token.name} </TableCell>
@@ -134,7 +145,7 @@ export function PortfolioCard() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               )
             })}
           </TableBody>
@@ -163,7 +174,7 @@ export function RefreshPortfolioButton() {
   const isLoading = !!queues.data?.inProgress
 
   async function handleRefresh() {
-    const promise = honoClient.balances.$post()
+    const promise = honoClient.balances.$post().then(throwIfNotOk)
     const msg = 'Starting to fetch balances in the background'
 
     toast.promise(promise, {

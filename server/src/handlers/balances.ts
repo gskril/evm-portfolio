@@ -257,9 +257,9 @@ export async function getOffchainBalances(c: Context) {
 }
 
 const editOffchainAccountSchema = z.object({
-  account: z.number(),
-  token: z.number(),
-  amount: z.number(),
+  account: z.number().int().positive(),
+  token: z.number().int().positive(),
+  amount: z.number().nonnegative(),
 })
 
 export async function editOffchainBalance(c: Context) {

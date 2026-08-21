@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import path from 'node:path'
 import { defineConfig } from 'vite'
 
 const backendTarget = 'http://127.0.0.1:8579'
@@ -27,8 +27,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      'server/hc': path.resolve(__dirname, '../server/dist/hc.d.ts'),
+      '@': path.resolve(import.meta.dirname, './src'),
+      'server/hc': path.resolve(import.meta.dirname, '../server/dist/hc.d.ts'),
     },
   },
 })

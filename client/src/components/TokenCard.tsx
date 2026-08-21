@@ -1,10 +1,12 @@
 import { Trash } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { zfd } from 'zod-form-data'
 
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -28,6 +30,7 @@ import {
 
 import {
   honoClient,
+  throwIfNotOk,
   useBalances,
   useChains,
   useEthValuesByAccount,
@@ -59,7 +62,7 @@ export function TokenCard() {
           <Button
             variant="secondary"
             onClick={async () => {
-              const promise = honoClient.setup.tokens.$post()
+              const promise = honoClient.setup.tokens.$post().then(throwIfNotOk)
 
               toast.promise(promise, {
                 loading: 'Adding default tokens...',
@@ -100,13 +103,24 @@ export function TokenCard() {
                   <Button
                     variant="outline"
                     size="icon"
+                    aria-label={`Delete ${token.name} on ${token.chain?.name ?? 'chain'}`}
                     onClick={async () => {
-                      const promise = honoClient.tokens.$delete({
-                        json: {
-                          address: token.address,
-                          chainId: token.chain!.id,
-                        },
-                      })
+                      if (
+                        !window.confirm(
+                          `Delete ${token.name} on ${token.chain?.name ?? 'this chain'}? Its saved balances will also be removed.`
+                        )
+                      ) {
+                        return
+                      }
+
+                      const promise = honoClient.tokens
+                        .$delete({
+                          json: {
+                            address: token.address,
+                            chainId: token.chain!.id,
+                          },
+                        })
+                        .then(throwIfNotOk)
 
                       toast.promise(promise, {
                         loading: 'Deleting token...',
@@ -135,6 +149,7 @@ export function TokenCard() {
 function TokenDialog() {
   const { data: chains } = useChains()
   const { refetch: refetchTokens } = useTokens()
+  const [open, setOpen] = useState(false)
 
   async function handleAddToken(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -147,26 +162,32 @@ function TokenDialog() {
     }
 
     const json = safeParse.data
-    const promise = honoClient.tokens.$post({ json })
+    const promise = honoClient.tokens
+      .$post({ json })
+      .then(throwIfNotOk)
+      .then(() => {
+        refetchTokens()
+        setOpen(false)
+      })
 
     toast.promise(promise, {
       loading: 'Adding token...',
-      success: () => {
-        refetchTokens()
-        return 'Token added'
-      },
+      success: 'Token added',
       error: 'Failed to add token',
     })
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>Add</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Token</DialogTitle>
+          <DialogDescription>
+            Add an ERC-20 contract or native ETH to a configured chain.
+          </DialogDescription>
         </DialogHeader>
 
         <form
@@ -177,7 +198,7 @@ function TokenDialog() {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="chainId">Chain</Label>
             <Select name="chainId">
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="chainId" className="w-full">
                 <SelectValue placeholder="Chain" />
               </SelectTrigger>
               <SelectContent>
@@ -193,6 +214,7 @@ function TokenDialog() {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="addressOrName">Address or ENS name</Label>
             <Input
+              id="addressOrName"
               name="addressOrName"
               placeholder="usdc.tkn.eth"
               autoComplete="off"

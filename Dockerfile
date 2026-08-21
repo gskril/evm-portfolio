@@ -1,19 +1,20 @@
 # Use the official Bun image
-FROM oven/bun:1 as builder
+FROM oven/bun:1.3.14 as builder
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package.json .
+COPY bun.lock .
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 
-# Copy source code first
-COPY . .
-
 # Install dependencies
-RUN bun install --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts
+
+# Copy application source after installing dependencies to preserve layer caching.
+COPY . .
 
 # Build server first
 WORKDIR /app/server
@@ -24,7 +25,7 @@ WORKDIR /app/client
 RUN bun run build
 
 # Start a new stage for the runtime
-FROM oven/bun:1
+FROM oven/bun:1.3.14
 
 WORKDIR /app
 
