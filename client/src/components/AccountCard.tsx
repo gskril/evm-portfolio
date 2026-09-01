@@ -54,6 +54,7 @@ export function AccountCard() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Description</TableHead>
+              <TableHead>Tags</TableHead>
               <TableHead>Address</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -63,6 +64,18 @@ export function AccountCard() {
               <TableRow key={account.id}>
                 <TableCell>{account.name}</TableCell>
                 <TableCell>{account.description}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {account.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </TableCell>
                 <TableCell>{account.address}</TableCell>
 
                 <TableCell className="flex justify-end gap-2">
@@ -119,6 +132,7 @@ const addAccountSchema = zfd.formData({
   name: zfd.text(z.string().optional()),
   description: zfd.text(z.string().optional()),
   addressOrName: zfd.text(z.string().optional()),
+  tags: zfd.text(z.string().optional()),
 })
 
 function AccountDialog({
@@ -146,7 +160,18 @@ function AccountDialog({
       return
     }
 
-    const json = safeParse.data
+    const { tags, ...account } = safeParse.data
+    const json = {
+      ...account,
+      tags: [
+        ...new Set(
+          (tags ?? '')
+            .split(',')
+            .map((tag) => tag.trim().toLowerCase())
+            .filter(Boolean)
+        ),
+      ],
+    }
     const promise = honoClient.accounts
       .$post({ json })
       .then(throwIfNotOk)
@@ -223,6 +248,22 @@ function AccountDialog({
               name="description"
               autoComplete="off"
               defaultValue={selectedAccount?.description ?? ''}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="tags">
+              Tags{' '}
+              <span className="text-muted-foreground text-xs leading-none">
+                (comma-separated)
+              </span>
+            </Label>
+            <Input
+              id="tags"
+              name="tags"
+              placeholder="business, personal"
+              autoComplete="off"
+              defaultValue={selectedAccount?.tags.join(', ')}
             />
           </div>
 

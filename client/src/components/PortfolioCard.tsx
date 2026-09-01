@@ -1,5 +1,5 @@
 import { ChevronDownIcon, RefreshCcwIcon } from 'lucide-react'
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useQueues } from '@/hooks/useQueues'
@@ -8,12 +8,20 @@ import { useCurrency } from '../hooks/useCurrency'
 import {
   honoClient,
   throwIfNotOk,
+  useAccounts,
   useBalances,
   useFiat,
 } from '../hooks/useHono'
 import { formatCurrency, toFixed } from '../lib/utils'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select'
 import {
   Table,
   TableBody,
@@ -26,9 +34,62 @@ import {
 
 export function PortfolioCard() {
   const balances = useBalances()
+  const accounts = useAccounts()
   const { currency } = useCurrency()
   const { data: fiat } = useFiat()
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set())
+  const [selectedTag, setSelectedTag] = useState('all')
+
+  const tags = useMemo(
+    () =>
+      [
+        ...new Set(accounts.data?.flatMap((account) => account.tags) ?? []),
+      ].sort(),
+    [accounts.data]
+  )
+
+  const filteredPortfolio = useMemo(() => {
+    if (!balances.data) return undefined
+    if (selectedTag === 'all') return balances.data
+
+    const accountIds = new Set(
+      accounts.data
+        ?.filter((account) => account.tags.includes(selectedTag))
+        .map((account) => account.id) ?? []
+    )
+
+    const tokens = balances.data.tokens
+      .map((token) => {
+        const accountBreakdown = token.accountBreakdown.filter((item) =>
+          accountIds.has(item.account.id)
+        )
+        const balance = accountBreakdown.reduce(
+          (total, item) => total + item.balance,
+          0
+        )
+        const ethValue = accountBreakdown.reduce(
+          (total, item) => total + item.ethValue,
+          0
+        )
+
+        return {
+          ...token,
+          balance,
+          ethValue,
+          accountBreakdown: accountBreakdown.map((item) => ({
+            ...item,
+            percentage: (item.balance / balance) * 100,
+          })),
+        }
+      })
+      .filter((token) => token.balance > 0)
+
+    return {
+      ...balances.data,
+      tokens,
+      totalEthValue: tokens.reduce((total, token) => total + token.ethValue, 0),
+    }
+  }, [accounts.data, balances.data, selectedTag])
 
   const toggleRow = (tokenId: number) => {
     setExpandedRows((prev) => {
@@ -44,9 +105,24 @@ export function PortfolioCard() {
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between gap-2">
+      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
         <CardTitle>Multichain Portfolio </CardTitle>
-        <RefreshPortfolioButton />
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={selectedTag} onValueChange={setSelectedTag}>
+            <SelectTrigger className="w-44" aria-label="Filter holdings by tag">
+              <SelectValue placeholder="Filter by tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All tags</SelectItem>
+              {tags.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  {tag}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <RefreshPortfolioButton />
+        </div>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-2">
@@ -62,7 +138,7 @@ export function PortfolioCard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {balances.data?.tokens.map((token) => {
+            {filteredPortfolio?.tokens.map((token) => {
               const isExpanded = expandedRows.has(token.id)
 
               return (
@@ -98,7 +174,8 @@ export function PortfolioCard() {
                     <TableCell
                       className="text-right"
                       title={`${toFixed(
-                        (token.ethValue / balances.data?.totalEthValue) * 100,
+                        (token.ethValue / filteredPortfolio.totalEthValue) *
+                          100,
                         2
                       )}% of net value`}
                     >
@@ -148,6 +225,16 @@ export function PortfolioCard() {
                 </Fragment>
               )
             })}
+            {filteredPortfolio?.tokens.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="text-muted-foreground py-8 text-center"
+                >
+                  No holdings found for the selected tag.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
           <TableFooter>
             <TableRow>
@@ -156,7 +243,7 @@ export function PortfolioCard() {
                 {fiat &&
                   currency &&
                   formatCurrency(
-                    (balances.data?.totalEthValue ?? 0) /
+                    (filteredPortfolio?.totalEthValue ?? 0) /
                       fiat.getRate(currency),
                     currency
                   )}
