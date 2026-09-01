@@ -1,15 +1,30 @@
 import type { Context } from 'hono'
-import type { BlankEnv } from 'hono/types'
-import { type Address, isAddress } from 'viem'
+import type { Transaction } from 'kysely'
+import { isAddress } from 'viem'
 import { z } from 'zod'
 
 import { getViemClient } from '../chains'
-import { db } from '../db'
+import { type Tables, db } from '../db'
 import { truncateAddress } from '../utils'
 
 const getAccountsSchema = z.object({
   type: z.enum(['onchain', 'offchain']).optional(),
 })
+
+const tagSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(32)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9 _-]*$/, {
+    message:
+      'Tags may only contain letters, numbers, spaces, hyphens, and underscores',
+  })
+
+const tagsSchema = z
+  .array(tagSchema)
+  .max(20)
+  .transform((tags) => [...new Set(tags.map((tag) => tag.toLowerCase()))])
 
 export async function getAccounts(c: Context) {
   const safeParse = getAccountsSchema.safeParse(c.req.query())
@@ -41,7 +56,17 @@ export async function getAccounts(c: Context) {
       accounts = await db.selectFrom('accounts').selectAll().execute()
   }
 
-  return c.json(accounts)
+  const accountTags = await db.selectFrom('accountTags').selectAll().execute()
+
+  return c.json(
+    accounts.map((account) => ({
+      ...account,
+      tags: accountTags
+        .filter((accountTag) => accountTag.accountId === account.id)
+        .map((accountTag) => accountTag.tag)
+        .sort(),
+    }))
+  )
 }
 
 // Maybe will be relevant in the future but we don't need it right now
@@ -66,11 +91,30 @@ export async function getAccounts(c: Context) {
 // }
 
 const addAccountSchema = z.object({
-  id: z.coerce.number().optional(),
+  id: z.coerce.number().int().positive().optional(),
   addressOrName: z.string().optional(),
   name: z.string().optional(),
   description: z.string().optional(),
+  tags: tagsSchema.optional().default([]),
 })
+
+async function replaceAccountTags(
+  trx: Transaction<Tables>,
+  accountId: number,
+  tags: string[]
+) {
+  await trx
+    .deleteFrom('accountTags')
+    .where('accountId', '=', accountId)
+    .execute()
+
+  if (tags.length > 0) {
+    await trx
+      .insertInto('accountTags')
+      .values(tags.map((tag) => ({ accountId, tag })))
+      .execute()
+  }
+}
 
 export async function addAccount(c: Context) {
   const body = await c.req.json()
@@ -80,7 +124,8 @@ export async function addAccount(c: Context) {
     return c.json({ error: safeParse.error }, 400)
   }
 
-  let { id, addressOrName, name, description } = safeParse.data
+  const { id, description, tags } = safeParse.data
+  let { addressOrName, name } = safeParse.data
 
   if (!addressOrName && !name) {
     return c.json(
@@ -89,28 +134,48 @@ export async function addAccount(c: Context) {
     )
   }
 
-  // Handle offchain accounts
-  if (!addressOrName) {
-    if (id) {
-      // Update an existing offchain account
-      await db
+  if (id) {
+    const account = await db
+      .selectFrom('accounts')
+      .select('id')
+      .where('id', '=', id)
+      .executeTakeFirst()
+
+    if (!account) {
+      return c.json({ error: 'Account not found' }, 404)
+    }
+
+    if (!name) {
+      return c.json({ error: 'Name is required when editing an account' }, 400)
+    }
+
+    await db.transaction().execute(async (trx) => {
+      await trx
         .updateTable('accounts')
-        .set({
-          name,
-          description,
-        })
+        .set({ name, description })
         .where('id', '=', id)
         .execute()
-    } else {
-      // Create a new offchain account
-      await db
+
+      await replaceAccountTags(trx, id, tags)
+    })
+
+    return c.json({ success: true })
+  }
+
+  // Handle offchain accounts
+  if (!addressOrName) {
+    await db.transaction().execute(async (trx) => {
+      const account = await trx
         .insertInto('accounts')
         .values({
           name: name!,
           description,
         })
-        .execute()
-    }
+        .returning('id')
+        .executeTakeFirstOrThrow()
+
+      await replaceAccountTags(trx, account.id, tags)
+    })
 
     return c.json({ success: true })
   }
@@ -154,7 +219,15 @@ export async function addAccount(c: Context) {
     return c.json({ error: 'Account already exists' }, 400)
   }
 
-  await db.insertInto('accounts').values(data).execute()
+  await db.transaction().execute(async (trx) => {
+    const account = await trx
+      .insertInto('accounts')
+      .values(data)
+      .returning('id')
+      .executeTakeFirstOrThrow()
+
+    await replaceAccountTags(trx, account.id, tags)
+  })
 
   return c.json({ success: true })
 }

@@ -26,6 +26,11 @@ interface AccountRow {
   createdAt: GeneratedAlways<Date>
 }
 
+interface AccountTagRow {
+  accountId: number // AccountRow['id']
+  tag: string
+}
+
 interface TokenRow {
   id: GeneratedAlways<number>
   address: Address
@@ -53,6 +58,7 @@ interface NetworthRow {
 
 export type Tables = {
   accounts: AccountRow
+  accountTags: AccountTagRow
   chains: ChainRow
   tokens: TokenRow
   balances: BalanceRow
