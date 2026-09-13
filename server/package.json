@@ -18,7 +18,7 @@
     "@bull-board/hono": "^8.6.1",
     "bullmq": "^5.81.3",
     "croner": "^9.0.0",
-    "hono": "4.13.0",
+    "hono": "4.13.7",
     "ioredis": "^5.11.1",
     "kysely": "^0.28.17",
     "kysely-bun-worker": "^1.2.1",
