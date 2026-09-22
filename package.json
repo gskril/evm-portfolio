@@ -27,5 +27,9 @@
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "browserslist": ">=4.28.7",
+    "@humanfs/node": ">=0.16.8"
   }
 }
