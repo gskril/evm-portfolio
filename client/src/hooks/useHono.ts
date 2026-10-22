@@ -8,7 +8,13 @@ export const SERVER_URL = '/api'
 
 export const honoClient: Client = hc(SERVER_URL) as unknown as Client
 
-export async function throwIfNotOk<T extends Response>(response: T) {
+// Structural type rather than `Response`: Bun 1.4's `Response` adds members
+// (e.g. `textStream`) that Hono's `ClientResponse` doesn't implement.
+type ResponseLike = Pick<Response, 'ok' | 'status'> & {
+  clone(): { json(): Promise<unknown> }
+}
+
+export async function throwIfNotOk<T extends ResponseLike>(response: T) {
   if (response.ok) {
     return response
   }

@@ -1,5 +1,5 @@
 # Use the official Bun image
-FROM oven/bun:1.3.14 as builder
+FROM oven/bun:1.4.4 as builder
 
 # Set working directory
 WORKDIR /app
@@ -25,7 +25,7 @@ WORKDIR /app/client
 RUN bun run build
 
 # Start a new stage for the runtime
-FROM oven/bun:1.3.14
+FROM oven/bun:1.4.4
 
 WORKDIR /app
 
