@@ -23,7 +23,7 @@
     "kysely": "^0.28.17",
     "kysely-bun-worker": "^1.2.1",
     "viem": "^2.55.15",
-    "zod": "^3.24.4"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
